@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Plane</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
+    <style>
+        /* CSS Integrado */
+        #game-container {
+            width: 400px;
+            height: 600px;
+            margin: 50px auto;
+            border: 3px solid #333;
+            overflow: hidden; 
+            position: relative;
+            background-color: #70c5ce; 
+            cursor: pointer;
+        }
+
+        /* ------------------------------------- */
+        /* ESTILOS DEL AVIÓN (CORREGIDOS) */
+        /* ------------------------------------- */
+        #plane-wrapper {
+            position: absolute;
+            left: 50px;
+            top: 250px;
+            width: 50px; 
+            height: 35px; 
+            z-index: 5;
+            transition: transform 0.05s linear; 
+        }
+        
+       #plane {
+    position: relative; /* Necesitas esto para posicionar la cabina */
+    width: 45px;
+    height: 8px;
+    background: #fff;
+    border: 1px solid #333;
+    border-radius: 5px;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    transform-origin: center center;
+}
+
+/* Estilo para la cabina/motor ahora en la DERECHA */
+#plane::before {
+    content: "";
+    position: absolute;
+    /* CAMBIO CLAVE: Usa 'right' en lugar de 'left' */
+    right: -1px; 
+    top: 0px;
+    width: 8px;
+    height: 8px;
+    background: #999;
+    border-radius: 50%;
+    border: 1px solid #333;
+}
+
+}
+
+}
+
+        }
+        
+        /* Nariz/Cabina */
+        #plane::before {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #aaa;
+            border-radius: 50%;
+            left: 38px;
+            top: 0px;
+            border: 1px solid #333;
+            transform: scaleX(-1); 
+        }
+        
+        /* Ala Superior (Vertical y Corta) */
+        #plane::after {
+            content: '';
+            position: absolute;
+            width: 15px;
+            height: 5px; 
+            background: #fff;
+            border: 1px solid #333;
+            border-radius: 2px;
+            right: 15px; 
+            top: -10px;
+            transform: rotate(90deg) scaleX(-1); 
+            transform-origin: 50% 100%;
+        }
+        
+        /* Cola vertical (Timón de dirección, fuera del cuerpo, en el wrapper) */
+        #plane-wrapper::before {
+             content: '';
+            position: absolute;
+            width: 6px;
+            height: 10px;
+            background: #fff;
+            border: 1px solid #333;
+            border-top-left-radius: 3px;
+            border-bottom-right-radius: 3px; 
+            right: 44px;
+            top: 5px; 
+            z-index: 6;
+        }
+
+        /* Ala Inferior (Vertical y Corta) - EN EL WRAPPER */
+        #plane-wrapper::after {
+            content: '';
+            position: absolute;
+            width: 15px; 
+            height: 5px; 
+            background: #fff;
+            border: 1px solid #333;
+            border-radius: 2px;
+            right: 20px; 
+            bottom: 5px; 
+            transform: rotate(90deg); 
+        }
+        /* ------------------------------------- */
+
+
+        /* ESTILOS DE EDIFICIOS CON VENTANAS (sin cambios) */
+        .building {
+            position: absolute;
+            width: 60px;
+            right: -60px; 
+            background-color: #444; 
+            border-left: 3px solid #333; 
+            border-right: 3px solid #333; 
+            box-sizing: border-box; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-around; 
+            padding: 5px 0; 
+            z-index: 1; 
+        }
+
+        .top-building {
+            bottom: 0; 
+        }
+
+        .bottom-building {
+            top: 0; 
+        }
+
+        .window-row {
+            display: flex;
+            justify-content: space-around; 
+            margin: 2px 0; 
+        }
+
+        .window {
+            width: 15px;
+            height: 15px;
+            background-color: #FFD700; 
+            border: 1px solid #222;
+            border-radius: 2px;
+            box-shadow: inset 0 0 5px rgba(255, 255, 0, 0.5); 
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-family: sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 0 #333;
+            z-index: 10;
+        }
+
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-family: sans-serif;
+            font-size: 20px;
+            text-align: center;
+            border-radius: 10px;
+            z-index: 20;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="plane-wrapper">
+            <div id="plane"></div> 
+        </div>
+        <div id="score">Puntuación: 0</div>
+        <div id="message">Presiona **ESPACIO** o **toca** para empezar</div>
+    </div>
+
+    <script>
+        // JavaScript Integrado (La lógica no cambia, solo la presentación)
+        const gameContainer = document.getElementById('game-container');
+        const planeWrapper = document.getElementById('plane-wrapper'); 
+        const scoreDisplay = document.getElementById('score');
+        const messageDisplay = document.getElementById('message');
+
+        let planeY = 250;
+        let velocity = 0;
+        const gravity = 0.6;
+        const jumpStrength = -10;
+        let score = 0;
+        let isPlaying = false;
+        let gameStarted = false; 
+        let gameInterval;
+        let buildingInterval;
+
+        const gameHeight = 600;
+        const buildingWidth = 60; 
+        
+        const planeHeight = 35; 
+        const planeWidth = 50; 
+        const planeX = 50; 
+
+        // --- Funciones del juego ---
+
+        function startGame() {
+            planeY = 250;
+            velocity = 0;
+            score = 0;
+            scoreDisplay.textContent = 'Puntuación: 0';
+            
+            planeWrapper.style.top = planeY + 'px';
+            planeWrapper.style.transform = 'rotate(0deg)';
+
+            document.querySelectorAll('.building').forEach(b => b.remove());
+            messageDisplay.style.display = 'none';
+
+            isPlaying = true;
+            gameStarted = true;
+            
+            gameInterval = setInterval(gameLoop, 20);
+            buildingInterval = setInterval(generateBuildingPair, 1500);
+        }
+
+        function endGame() {
+            isPlaying = false;
+            clearInterval(gameInterval);
+            clearInterval(buildingInterval);
+
+            messageDisplay.innerHTML = `**¡GAME OVER!** 💥<br>Puntuación final: **${score}**<br>Presiona **ESPACIO** o **toca** para reiniciar.`;
+            messageDisplay.style.display = 'block';
+        }
+
+        function handleJump(event) {
+            if ((event.type === 'keydown' && event.code === 'Space') || event.type === 'click') {
+                event.preventDefault(); 
+                
+                if (!gameStarted) {
+                    startGame();
+                } 
+                
+                if (isPlaying) {
+                    velocity = jumpStrength;
+                }
+                else if (gameStarted && !isPlaying) { 
+                    startGame();
+                }
+            }
+        }
+
+        function gameLoop() {
+            if (!isPlaying) return;
+
+            // --- 1. Aplicar gravedad y actualizar posición ---
+            velocity += gravity;
+            planeY += velocity;
+            
+            planeWrapper.style.top = planeY + 'px';
+
+            let rotation = 0;
+            if (velocity < 0) {
+                rotation = -25; 
+            } else if (velocity > 15) {
+                rotation = 90; 
+            } else {
+                rotation = Math.min(velocity * 4, 90); 
+            }
+            planeWrapper.style.transform = `rotate(${rotation}deg)`;
+
+            // --- 2. Comprobar colisiones con el suelo/techo ---
+            if (planeY > gameHeight - planeHeight || planeY < 0) {
+                endGame();
+                return;
+            }
+
+            // --- 3. Mover y comprobar edificios ---
+            document.querySelectorAll('.building').forEach(building => {
+                let buildingX = building.offsetLeft;
+
+                buildingX -= 3; 
+                building.style.left = buildingX + 'px';
+
+                if (buildingX < -buildingWidth) {
+                    building.remove();
+                }
+
+                // --- Detección de colisión ---
+                const planeRect = planeWrapper.getBoundingClientRect();
+                const buildingRect = building.getBoundingClientRect();
+
+                if (
+                    planeRect.left < buildingRect.right &&
+                    planeRect.right > buildingRect.left &&
+                    planeRect.top < buildingRect.bottom &&
+                    planeRect.bottom > buildingRect.top
+                ) {
+                    endGame();
+                }
+
+                // --- Actualizar puntuación ---
+                if (building.classList.contains('top-building') && !building.counted) {
+                    if (buildingX + buildingWidth < planeX) {
+                        score++;
+                        scoreDisplay.textContent = 'Puntuación: ' + score;
+                        building.counted = true; 
+                    }
+                }
+            });
+        }
+
+        function generateBuildingPair() {
+            const gap = 170; 
+            const minHeight = 60;
+            const maxHeight = gameHeight - gap - minHeight;
+
+            const topHeight = Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
+            const bottomHeight = gameHeight - topHeight - gap;
+
+            const topBuilding = document.createElement('div');
+            topBuilding.classList.add('building', 'top-building');
+            topBuilding.style.height = topHeight + 'px';
+            topBuilding.counted = false;
+            generateWindows(topBuilding, topHeight); 
+            gameContainer.appendChild(topBuilding);
+
+            const bottomBuilding = document.createElement('div');
+            bottomBuilding.classList.add('building', 'bottom-building');
+            bottomBuilding.style.height = bottomHeight + 'px';
+            generateWindows(bottomBuilding, bottomHeight); 
+            gameContainer.appendChild(bottomBuilding);
+        }
+
+        function generateWindows(buildingElement, height) {
+            const windowRowHeight = 25; 
+            const numWindowRows = Math.floor((height - 10) / windowRowHeight);
+
+            for (let i = 0; i < numWindowRows; i++) {
+                const row = document.createElement('div');
+                row.classList.add('window-row');
+                
+                const numWindowsInRow = Math.random() > 0.5 ? 2 : 3;
+                for (let j = 0; j < numWindowsInRow; j++) {
+                    const window = document.createElement('div');
+                    window.classList.add('window');
+                    row.appendChild(window);
+                }
+                buildingElement.appendChild(row);
+            }
+        }
+
+        // --- Inicialización ---
+        document.addEventListener('keydown', handleJump);
+        gameContainer.addEventListener('click', handleJump);
+    </script>
+</body>
+</html>
